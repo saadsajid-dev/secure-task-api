@@ -1,61 +1,67 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
 from typing import List
 
-from app.models import Task, TaskCreate
+from app.database import engine, SessionLocal
+from app import models, schemas
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Secure Task Management API")
 
-tasks_db: List[Task] = []
-task_id_counter = 1
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
-@app.post("/tasks", response_model=Task, status_code=201)
-def create_task(task: TaskCreate):
-    global task_id_counter
-
-    new_task = Task(
-        id=task_id_counter,
+@app.post("/tasks", response_model=schemas.TaskResponse, status_code=201)
+def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
+    db_task = models.Task(
         title=task.title,
-        description=task.description,
-        completed=False
+        description=task.description
     )
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
+    return db_task
 
-    tasks_db.append(new_task)
-    task_id_counter += 1
+@app.get("/tasks", response_model=List[schemas.TaskResponse])
+def list_tasks(db: Session = Depends(get_db)):
+    return db.query(models.Task).all()
 
-    return new_task
+@app.get("/tasks/{task_id}", response_model=schemas.TaskResponse)
+def get_task(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
 
-@app.get("/tasks", response_model=List[Task])
-def list_tasks():
-    return tasks_db
+@app.put("/tasks/{task_id}", response_model=schemas.TaskResponse)
+def update_task(task_id: int, updated_task: schemas.TaskCreate, db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
 
-@app.get("/tasks/{task_id}", response_model=Task)
-def get_task(task_id: int):
-    for task in tasks_db:
-        if task.id == task_id:
-            return task
-        
-    raise HTTPException(status_code=404, detail="Task not found")
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
 
-@app.put("/tasks/{task_id}", response_model=Task)
-def update_task(task_id: int, udpated_task: TaskCreate):
-    for task in tasks_db:
-        if task.id == task_id:
-            task.title = udpated_task.title
-            task.description = udpated_task.description
-            return task
-    
-    raise HTTPException(status_code=404, detail="Task not found")
+    task.title = updated_task.title
+    task.description = updated_task.description
+
+    db.commit()
+    db.refresh(task)
+
+    return task
 
 @app.delete("/tasks/{task_id}", status_code=204)
-def delete_task(task_id: int):
-    for index, task in enumerate(tasks_db):
-        if task.id == task_id:
-            tasks_db.pop(index)
-            return
-        
-    raise HTTPException(status_code=404, detail="Task not found")
-
+def delete_task(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    db.delete(task)
+    db.commit()

@@ -1,10 +1,10 @@
-from pydantic import BaseModel
-from typing import Optional
+from sqlalchemy import Column, Integer, String, Boolean
+from app.database import Base
 
-class TaskCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
+class Task(Base):
+    __tablename__ = "tasks"
 
-class Task(TaskCreate):
-    id: int
-    completed: bool = False
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    completed = Column(Boolean, default=False)
