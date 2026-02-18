@@ -59,10 +59,12 @@ def create_task(
 
 @app.get("/tasks", response_model=List[schemas.TaskResponse])
 def list_tasks(
+    skip: int = 0,
+    limit: int = 10,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
     ):
-    return db.query(models.Task).filter(models.Task.owner_id == current_user.id).all()
+    return db.query(models.Task).filter(models.Task.owner_id == current_user.id).order_by(models.Task.id.asc()).offset(skip).limit(limit).all()
 
 @app.get("/tasks/{task_id}", response_model=schemas.TaskResponse)
 def get_task(
