@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
+from app.security import hash_password, verify_password
 from app.database import engine, SessionLocal
 from app import models, schemas
 
@@ -65,3 +66,21 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     
     db.delete(task)
     db.commit()
+
+@app.post("/register", response_model=schemas.UserResponse)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    new_user = models.User(
+        email=user.email,
+        hashed_password=hash_password(user.password)
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return new_user
+

@@ -13,3 +13,15 @@ class TaskResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+
+    class Config:
+        orm_mode = True
+
