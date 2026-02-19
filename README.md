@@ -14,6 +14,7 @@ https://secure-task-api-t99d.onrender.com/docs
 - JWT (python-jose)
 - passlib (bcrypt)
 - Uvicorn
+- pytest (automated testing)
 - Render (deployment)
 
 ## Module Responsibilities
@@ -26,6 +27,13 @@ https://secure-task-api-t99d.onrender.com/docs
 - **database.py** — Configures database engine and session management.
 
 This modular structure ensures separation of concerns and maintainable backend architecture.
+
+## Testing
+
+Automated API tests implemented using pytest.
+
+- **test_auth.py** - Tests user registration and JWT login flow.
+- **test_tasks.py** - Tests protected routes, authorization enforcement, task creation, and pagination behavior.
 
 ## Local Setup
 
@@ -58,7 +66,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 ### 5. Create .env File in your root folder, and write:
 
 ```ini
-SECRET_KEY = your_generated_secret_key
+SECRET_KEY=your_generated_secret_key
 ```
 
 ### 6. Run Server
